@@ -1,0 +1,2 @@
+2022.09.05: Képkonvertálási metódusok keresése pythonban és linux-on. Linuxon convert,mogrify. python PIL
+2022.09:07: Talált metódusok tesztelése, különböző convertálók más méretet adnak felfedezése. initial commit
