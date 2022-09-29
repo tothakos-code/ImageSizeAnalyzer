@@ -1,2 +1,13 @@
+The goal of this project
+try to convert images to smaller size by brute force - brute mode
+try to convert images to smaller size by analyzing the pixels to guess a format - analytic to size
+try to convert images to smaller size by analyzing the pixels to keep the smallest size image what makes sense(keep the image color and characteristic) - analytic but keep quality in mind
+try to convert images to smaller site by converting them to different color schemes
+try to combine all of the above to minimize to outcome image size - auto mode [quality | size]
+Far future goal, probably not gonna do it, but just in case
+try to implement an own compression algorithm
+
 2022.09.05: Képkonvertálási metódusok keresése pythonban és linux-on. Linuxon convert,mogrify. python PIL
 2022.09:07: Talált metódusok tesztelése, különböző convertálók más méretet adnak felfedezése. initial commit
+2022.09.08: További própálkozás,tesztelés. Célkitűzés program működésével kapcsolatban.
+2022.09.29: CLI argumentumok kezelesmegvalositas,
