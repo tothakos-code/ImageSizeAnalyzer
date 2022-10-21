@@ -28,6 +28,16 @@ format_modes={
 }
 
 
+def is_same(source_a_path, source_b_path):
+    img_a = cv2.imread(source_a_path)
+    img_b = cv2.imread(source_b_path)
+
+    err = np.sum((img_a.astype("float") - img_b.astype("float")) ** 2)
+
+    err /= float(img_a.shape[0] * img_b.shape[1])
+
+    print("Image different:" + str(err))
+    print("Image different:" + str(ssim(img_a,img_b, multichannel=True)))
 
 def convert_getsize(source_img,to_ext, conv, losl, opt, qua):
     image_to_analyze = Image.open(source_img)
@@ -45,6 +55,8 @@ def convert_getsize(source_img,to_ext, conv, losl, opt, qua):
         image_to_analyze.convert(conv).save(destination_temp_file, quality=qua, optimize=opt, compress_level=0, lossless=losl)
     else:
         image_to_analyze.save(destination_temp_file, quality=qua, optimize=opt, compress_level=0, lossless=losl)
+
+    is_same(source_img, destination_temp_file)
 
     # determin the size of the saved file
     file_size = int(os.path.getsize(destination_temp_file))
@@ -67,7 +79,7 @@ def main():
         exit (1)
     opts, args = getopt.getopt(sys.argv[1:], 'q:c:f:lo')
     for k, v in opts:
-        if k == '-q':
+        if k == '-q' and lossless==False:
             if int(v) > 100:
                 quality=100
             elif int(v)<0:
@@ -83,6 +95,7 @@ def main():
                 compress_level=int(v)
         if k == '-l':
             lossless=True
+            quality=100
         if k == '-o':
             optimize=True
         if k == '-f':
