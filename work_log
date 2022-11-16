@@ -10,4 +10,7 @@ try to implement an own compression algorithm
 2022.09.05: Képkonvertálási metódusok keresése pythonban és linux-on. Linuxon convert,mogrify. python PIL
 2022.09:07: Talált metódusok tesztelése, különböző convertálók más méretet adnak felfedezése. initial commit
 2022.09.08: További própálkozás,tesztelés. Célkitűzés program működésével kapcsolatban.
-2022.09.29: CLI argumentumok kezelesmegvalositas,
+2022.09.29: CLI argumentumok kezelesmegvalositas, cel megfogalmazas es leiras
+2022.10.24: Keposszehasonlitas , kep hisztogram es egyeb adatok elemzese
+2022.11.13: Face detection megvalositasa
+2022.11.15: Formatum kivalasztas fejlesztese lossless/transparent/dokumentum/facerecognized
