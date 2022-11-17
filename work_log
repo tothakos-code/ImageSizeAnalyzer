@@ -14,3 +14,12 @@ try to implement an own compression algorithm
 2022.10.24: Keposszehasonlitas , kep hisztogram es egyeb adatok elemzese
 2022.11.13: Face detection megvalositasa
 2022.11.15: Formatum kivalasztas fejlesztese lossless/transparent/dokumentum/facerecognized
+
+Performance upgrade:
+  - calculate image size in memory, so I don't need to write every image
+Problem:
+- Did not find a dynamic way  to is_document, hardcoding values is not a good options
+
+TODO:
+- structure the code
+- Performance test, is slow ~1min for a 2k image, almost 2 min with -lo flags
