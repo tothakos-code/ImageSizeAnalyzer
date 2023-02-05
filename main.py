@@ -1,8 +1,8 @@
 #!/bin/python3
-from skimage.metrics import structural_similarity as ssim
 from PIL import Image
 import os
 import sys
+import io
 import getopt
 import cv2
 import math
@@ -69,32 +69,29 @@ def is_same(img_a_input, img_b_input):
         print("Image different:" + str(res))
     return res
 
-def convert_getsize(image_to_analyze, src_img_path, to_ext, conv, losl, opt, qua):
-    source_name = os.path.splitext(src_img_path)[0]
-    source_extention = os.path.splitext(src_img_path)[1]
-    if output_file_name=="":
-        destination_temp_file = source_name + "_" + source_extention[1:] + "-to-"+ to_ext[1:]+ ("_"+conv if conv!=None else "") +"_temp"+ to_ext
-    else:
-        destination_temp_file = output_file_name
-
-    # Save the file in the format
-    if conv != None:
-        image_to_analyze.convert(conv).save(destination_temp_file, quality=qua, optimize=opt, compress_level=0, lossless=losl)
-    else:
-        image_to_analyze.save(destination_temp_file, quality=qua, optimize=opt, compress_level=0, lossless=losl)
-
-    diff=is_same(src_img_path, destination_temp_file)
-
-    # determin the size of the saved file
-    file_size = int(os.path.getsize(destination_temp_file))
+def convert_getsize(image_to_analyze, src_img_path, to_ext, to_mode, losl, opt, qua):
+    # Convert the image to the format in memory
+    new_image_obj = io.BytesIO()
+    image_to_analyze.convert(mode=to_mode,palette=0).save(new_image_obj, format=to_ext, quality=qua, optimize=opt, compress_level=0, lossless=losl)
 
     if debug:
-        print("Image size from " + source_extention.upper() + " to " + to_ext.upper() + (" with " + conv if conv!=None else "") + ": " + str(file_size) + " bytes")
+        print("Before",image_to_analyze.mode)
+        print("After",Image.open(new_image_obj, formats=[to_ext.upper()]).mode)
+
+    # Calculate difference
+    # Convert images to RGB so we can compare P and RGBA images as well pixel by pixel
+    diff = is_same(image_to_analyze.convert("RGB"), (Image.open(new_image_obj).convert("RGB")))
+
+    # determin the size of the image file
+    file_size = new_image_obj.tell()
+
+    if debug:
+        source_extention = os.path.splitext(src_img_path)[1]
+        print("Image size from " + source_extention.upper() + " to " + to_ext.upper() + (" with " + to_mode if to_mode!=None else "") + ": " + str(file_size) + " bytes")
         print("-------------------")
     return {
-        "path": destination_temp_file,
         "ext": to_ext,
-        "mode": conv,
+        "mode": to_mode,
         "size": file_size,
         "diff": diff
     }
