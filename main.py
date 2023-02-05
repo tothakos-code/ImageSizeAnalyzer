@@ -49,9 +49,10 @@ def byte_to_human(byte):
     size = round(byte / power, 2)
     return "{} {}".format(size, size_name[index])
 
-def is_same(source_a_path, source_b_path):
-    img_a = cv2.imread(source_a_path)
-    img_b = cv2.imread(source_b_path)
+def is_same(img_a_input, img_b_input):
+    img_a = np.array(img_a_input)
+    img_b = np.array(img_b_input)
+    # Calculate the MSE number
     try:
         err = np.sum((img_a.astype("float") - img_b.astype("float")) ** 2)
     except ValueError as e:
@@ -60,19 +61,13 @@ def is_same(source_a_path, source_b_path):
 
     err /= float(img_a.shape[0] * img_b.shape[1])
 
-    # same if 0
-    if debug:
-        print("Image different:" + str(err))
+    # map the result between 1 and 0. same if 1, totaly different if 0
+    res = np.interp(err,[0,195075],[1,0])
 
     # same if 1
-    if len(img_a.shape)==2:
-        diff=ssim(img_a, img_b)
-    else:
-        diff=ssim(img_a, img_b, channel_axis=2)
-
     if debug:
-        print("Image different: {0}".format(diff))
-    return diff
+        print("Image different:" + str(res))
+    return res
 
 def convert_getsize(image_to_analyze, src_img_path, to_ext, conv, losl, opt, qua):
     source_name = os.path.splitext(src_img_path)[0]
