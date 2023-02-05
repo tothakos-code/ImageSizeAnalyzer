@@ -18,24 +18,24 @@ debug=False
 # Starting formats: webp, png, jpg
 
 all_formats={
-    ".webp":["P","RGB","RGBA"],
-    ".png":["P","RGB","RGBA"],
-    ".jpg":["RGB"]
+    "webp":["P","RGB","RGBA"],
+    "png":["P","RGB","RGBA"],
+    "jpeg":["RGB"]
 }
 
 lossless_formats={
-    ".webp":["P","RGB","RGBA"],
-    ".png":["P","RGB","RGBA"]
+    "webp":["P","RGB","RGBA"],
+    "png":["P","RGB","RGBA"]
 }
 
 lossy_formats={
-    ".webp":["P","RGB","RGBA"],
-    ".jpg":["RGB"]
+    "webp":["P","RGB","RGBA"],
+    "jpeg":["RGB"]
 }
 
 transparents_formats={
-    ".webp":["P","RGBA"],
-    ".png":["P","RGBA"],
+    "webp":["P","RGBA"],
+    "png":["P","RGBA"],
 }
 
 # src: https://stackoverflow.com/questions/56243676/python-human-readable-to-byte-conversion
