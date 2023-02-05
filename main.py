@@ -9,6 +9,8 @@ import math
 import numpy as np
 from matplotlib import pyplot as plt
 
+
+# Default settings
 quality=80
 compress_level=6
 optimize=False
@@ -56,9 +58,11 @@ def is_same(img_a_input, img_b_input):
     try:
         err = np.sum((img_a.astype("float") - img_b.astype("float")) ** 2)
     except ValueError as e:
+        # Sometimes the convertion rotates the image, usualy images in portrait mode
         img_b = cv2.rotate(img_b, cv2.ROTATE_90_CLOCKWISE)
         err = np.sum((img_a.astype("float") - img_b.astype("float")) ** 2)
 
+    # This gives a number between 0 and 195075
     err /= float(img_a.shape[0] * img_b.shape[1])
 
     # map the result between 1 and 0. same if 1, totaly different if 0
@@ -95,13 +99,14 @@ def convert_getsize(image_to_analyze, src_img_path, to_ext, to_mode, losl, opt, 
         "size": file_size,
         "diff": diff
     }
-
+# Face detection
 def count_faces(src_img):
+    # Loading the cascade
     cascade_path = "./haarcascade.xml"
     cascade = cv2.CascadeClassifier(cascade_path)
-
+    # Reading in the image
     gray_image = cv2.imread(src_img, cv2.COLOR_BGR2GRAY)
-
+    # Running the cascase on the image
     faces = cascade.detectMultiScale(
         gray_image,
         scaleFactor=1.2,
@@ -109,8 +114,8 @@ def count_faces(src_img):
         minSize=(30, 30),
         flags = cv2.CASCADE_SCALE_IMAGE
     )
-    # if debug:
-    print("Found {0} faces!".format(len(faces)))
+    if debug:
+        print("Found {0} faces!".format(len(faces)))
     return faces
 
 # This does not run
@@ -143,10 +148,12 @@ def is_document(input_file_path):
 
 # source: https://stackoverflow.com/questions/43864101/python-pil-check-if-image-is-transparent
 def has_transparency(img):
+    # search metadata
     if img.info.get("transparency", None) is not None:
         if debug:
             print("Found transparency flag in image metadata.")
         return True
+    # If image is Palette then search the palette
     if img.mode == "P":
         transparent = img.info.get("transparency", -1)
         for _, index in img.getcolors():
@@ -154,6 +161,7 @@ def has_transparency(img):
                 if debug:
                     print("Found transparency color in Palette.")
                 return True
+    # RGBA mode
     elif img.mode == "RGBA":
         extrema = img.getextrema()
         if extrema[3][0] < 255:
@@ -165,6 +173,7 @@ def has_transparency(img):
 
 def main():
     global compress_level, quality, lossless, output_file_name, optimize, debug
+    # Help message
     if len(sys.argv) < 2:
         print ("Usage: ./main.py [-q <quality_level> -c <compress_level> -l -f <output_file_name>] <image_to_analyze>")
         print ("-q <quality_level> is a number between 0 and 100, 0 is worst quality best compression, 100 is almost lossless, best quality. Default: 80")
@@ -174,6 +183,7 @@ def main():
         print ("-f <output_file_name> output file name")
         print ("-v if present will show debug informations")
         exit (1)
+    # Reading in the flags and arguments
     opts, args = getopt.getopt(sys.argv[1:], 'q:c:f:lov')
     for k, v in opts:
         if k == '-q' and lossless==False:
@@ -202,10 +212,12 @@ def main():
 
     input_file_path = args[0]
 
+    # Checkif file exist
     if not os.path.exists(input_file_path):
         print("ERROR: This file does not exists: " + input_file_path)
         sys.exit(1)
 
+    # Reading the image and some data about
     image_to_analyze = Image.open(input_file_path)
     input_file_size = os.path.getsize(input_file_path)
 
@@ -220,38 +232,50 @@ def main():
 
 # TODO: or is_document(input_file_path)
 
+    # Setting what formats to use based on flags, or other information about the image
     # is_document(input_file_path)
     if lossless:
+        # If lossless flag is given use lossless formats
         formats_to_use=lossless_formats
     elif len(count_faces(input_file_path)) > 0:
+        # Detecting a face prefer lossy formats but only if lossless flag is not given
         formats_to_use=lossy_formats
 
+
     if has_transparency(image_to_analyze):
+        # Transparency do not affect lossless because trasparent modes are lossless
         formats_to_use=transparents_formats
 
+    # Convert the images to all posibile conbinations of formats and modes
     for ext, modes in formats_to_use.items():
         for mode in modes:
             result=convert_getsize(image_to_analyze, input_file_path, ext, mode, lossless, optimize, quality)
+            # Decide if we want to use the result at all in the end or not, diff == 1 meens there is no loss in the conversion
             if lossless and result["diff"] == 1:
                 all_result.append(result)
             elif not lossless:
                 all_result.append(result)
 
+    # Sort the final list by size
     final = sorted(all_result, key=lambda dic: dic['size'])[0]
 
+    # Check if the output file is larger than the original do nothing.
     if final["size"] > input_file_size:
         print("I couldn't find a better format for this image with these options.")
         sys.exit(0)
 
+    # The final image file name, what if they give an extension with the filename? TODO: only use that extension
     original_path = os.path.splitext(input_file_path)
     if output_file_name == "":
         output_file_name = "new_" + original_path[-2] + "." + final["ext"]
     else:
         output_file_name += "." + final["ext"]
 
+    # Convert and save the new image
     image_to_analyze = image_to_analyze.convert(final["mode"])
     image_to_analyze.save(output_file_name, quality=quality, optimize=optimize, compress_level=0, lossless=lossless)
 
+    # Result msg
     true_size = int(os.path.getsize(output_file_name))
 
     print("------------------------------------------------------------")
