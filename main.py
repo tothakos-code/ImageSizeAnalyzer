@@ -116,8 +116,9 @@ def count_faces(src_img):
     print("Found {0} faces!".format(len(faces)))
     return faces
 
-def is_document(source_img):
-    img = cv2.imread(source_img, cv2.IMREAD_COLOR)
+# This does not run
+def is_document(input_file_path):
+    img = cv2.imread(input_file_path, cv2.IMREAD_COLOR)
     b, g, r = cv2.split(img)
 
     print("sum,mean,max,min")
@@ -202,29 +203,30 @@ def main():
         if k == '-v':
             debug=True
 
-    source_img = args[0]
+    input_file_path = args[0]
 
-    if not os.path.exists(source_img):
-        print("ERROR: This file does not exists: " + source_img)
+    if not os.path.exists(input_file_path):
+        print("ERROR: This file does not exists: " + input_file_path)
         sys.exit(1)
 
+    image_to_analyze = Image.open(input_file_path)
+    input_file_size = os.path.getsize(input_file_path)
 
-    original_image_size = os.path.getsize(source_img)
-    print("Original file: " + source_img)
-    print("Original size: " + str(byte_to_human(original_image_size)) + " bytes")
+    print("Original file: " + input_file_path)
+    print("Original size: " + str(byte_to_human(input_file_size)) + " bytes")
+    if debug:
+        print("Image dimension: " + str(image_to_analyze.size[0]) + "x" + str(image_to_analyze.size[1]))
+        print("Src image mode: " + image_to_analyze.mode)
 
     all_result=[]
     formats_to_use=all_formats
 
-    image_to_analyze = Image.open(source_img)
-    if debug:
-        print("Src image mode: " + image_to_analyze.mode)
+# TODO: or is_document(input_file_path)
 
-# TODO: or is_document(source_img)
-    is_document(source_img)
+    # is_document(input_file_path)
     if lossless:
         formats_to_use=lossless_formats
-    elif len(count_faces(source_img)) > 0:
+    elif len(count_faces(input_file_path)) > 0:
         formats_to_use=lossy_formats
 
     if has_transparency(image_to_analyze):
@@ -232,31 +234,35 @@ def main():
 
     for ext, modes in formats_to_use.items():
         for mode in modes:
-            result=convert_getsize(image_to_analyze, source_img, ext, mode, lossless, optimize, quality)
+            result=convert_getsize(image_to_analyze, input_file_path, ext, mode, lossless, optimize, quality)
             if lossless and result["diff"] == 1:
                 all_result.append(result)
             elif not lossless:
                 all_result.append(result)
-            os.remove(result["path"])
 
     final = sorted(all_result, key=lambda dic: dic['size'])[0]
 
-    if final["size"] > original_image_size:
+    if final["size"] > input_file_size:
         print("I couldn't find a better format for this image with these options.")
         sys.exit(0)
 
-    original_path = os.path.splitext(source_img)
+    original_path = os.path.splitext(input_file_path)
     if output_file_name == "":
-        output_file_name = "new_" + original_path[-2] + final["ext"]
+        output_file_name = "new_" + original_path[-2] + "." + final["ext"]
     else:
-        output_file_name += final["ext"]
+        output_file_name += "." + final["ext"]
 
-        convert_getsize(image_to_analyze, source_img, final["ext"], final["mode"], lossless, optimize, quality)
+    image_to_analyze = image_to_analyze.convert(final["mode"])
+    image_to_analyze.save(output_file_name, quality=quality, optimize=optimize, compress_level=0, lossless=lossless)
 
+    true_size = int(os.path.getsize(output_file_name))
+
+    print("------------------------------------------------------------")
     print("The smallest format to store this picture: " + final["ext"])
     print("New image is {0}% the same.".format(round((final["diff"]*100),2)))
-    print("New image size is " + str(round(((final["size"]/original_image_size)*100),2))+"% of the original size.")
-    print("Converted to " + final["ext"].upper() + " with " + str(final["mode"]) + " mode: " + str(byte_to_human(final["size"])) + " bytes")
+    print("New image size is " + str(byte_to_human(true_size)) + " byte.")
+    print("New image size is " + str(round(((true_size/input_file_size)*100),2))+"% of the original size.")
+    print("Converted to " + final["ext"].upper() + " with " + str(final["mode"]) + " mode: " + str(byte_to_human(final["size"])))
 
 
 if __name__ == '__main__':
