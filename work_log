@@ -14,12 +14,23 @@ try to implement an own compression algorithm
 2022.10.24: Keposszehasonlitas , kep hisztogram es egyeb adatok elemzese
 2022.11.13: Face detection megvalositasa
 2022.11.15: Formatum kivalasztas fejlesztese lossless/transparent/dokumentum/facerecognized
+2023.01.27: Fajl meret syamitas memoriaban. Kepkulonbseg szamito algoritmus valtas gyorsabbra permormencia miatt.
+            kezdeti requirments.txt. Perfomancia javitas.
 
-Performance upgrade:
-  - calculate image size in memory, so I don't need to write every image
-Problem:
-- Did not find a dynamic way  to is_document, hardcoding values is not a good options
 
 TODO:
+- Performance test again with new code
+- new is_same return value map between 0 and 100. done
 - structure the code
-- Performance test, is slow ~1min for a 2k image, almost 2 min with -lo flags
+- run string detection to detemin is document
+
+Far TODO:
+- choose compare algorithm with falg
+- optional grayscale conversion
+- multi thread convesion/calculation support
+
+
+Comments:
+Palette mode setting 1, and 0. What is the difference?
+1 looks better, but only in webp, png still trash with -l flag.
+in convert get size method palette= line.
