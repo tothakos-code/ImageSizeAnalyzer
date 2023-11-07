@@ -11,13 +11,13 @@ from matplotlib import pyplot as plt
 
 
 # Default settings
-quality=80
-compress_level=6
-optimize=False
-lossless=False
+DEFAULT_QUALITY=80
+DEFAULT_COMPRESS_LEVEL=6
+DEFAULT_OPTIMIZE=False
+DEFAULT_LOSSLESS=False
 output_file_name=""
-debug=False
-# Starting formats: webp, png, jpg
+DEFAULT_DEBUG=False
+# currently supported formats: webp, png, jpg
 
 all_formats={
     "webp":["P","RGB","RGBA"],
@@ -40,8 +40,12 @@ transparents_formats={
     "png":["P","RGBA"],
 }
 
+# it is in script mode or module mode
+SCRIPT=False
+
 # src: https://stackoverflow.com/questions/56243676/python-human-readable-to-byte-conversion
 def byte_to_human(byte):
+    """Converts from byte to a human readable size format"""
     if byte == 0:
         raise ValueError("Size is not valid.")
     byte = int(byte)
@@ -51,7 +55,8 @@ def byte_to_human(byte):
     size = round(byte / power, 2)
     return "{} {}".format(size, size_name[index])
 
-def is_same(img_a_input, img_b_input):
+def is_same(img_a_input, img_b_input, debug=DEFAULT_DEBUG):
+    """Recives two input image, and returns a 0-1 number how similiar the two picture is. The function is using the MSE comparative method. The return value if 1 it meand the two input picture are identical."""
     img_a = np.array(img_a_input)
     img_b = np.array(img_b_input)
     # Calculate the MSE number
@@ -73,10 +78,11 @@ def is_same(img_a_input, img_b_input):
         print("Image different:" + str(res))
     return res
 
-def convert_getsize(image_to_analyze, src_img_path, to_ext, to_mode, losl, opt, qua):
+def convert_getsize(image_to_analyze, src_img_path, to_ext, to_mode, lossless=DEFAULT_LOSSLESS, optimize=DEFAULT_OPTIMIZE, quality=DEFAULT_QUALITY,debug=DEFAULT_DEBUG):
+    """Converting the Image and collecting info about it. The conversion is in memory. Doeas not write the result file"""
     # Convert the image to the format in memory
     new_image_obj = io.BytesIO()
-    image_to_analyze.convert(mode=to_mode,palette=0).save(new_image_obj, format=to_ext, quality=qua, optimize=opt, compress_level=0, lossless=losl)
+    image_to_analyze.convert(mode=to_mode,palette=0).save(new_image_obj, format=to_ext, quality=quality, optimize=optimize, compress_level=0, lossless=lossless)
 
     if debug:
         print("Before",image_to_analyze.mode)
@@ -100,7 +106,8 @@ def convert_getsize(image_to_analyze, src_img_path, to_ext, to_mode, losl, opt, 
         "diff": diff
     }
 # Face detection
-def count_faces(src_img):
+def count_faces(src_img,debug=DEFAULT_DEBUG):
+    """Runs a face detection on the image and returns the number of faces it found."""
     # Loading the cascade
     cascade_path = "./haarcascade.xml"
     cascade = cv2.CascadeClassifier(cascade_path)
@@ -120,6 +127,7 @@ def count_faces(src_img):
 
 # This does not run
 def is_document(input_file_path):
+    """A try to detect if the image contains a picture of a document. But did not found a working solution. This function is not in use."""
     img = cv2.imread(input_file_path, cv2.IMREAD_COLOR)
     b, g, r = cv2.split(img)
 
@@ -147,7 +155,8 @@ def is_document(input_file_path):
     print("gray:", gray_matrix.sum(), gray_matrix.mean(), gray_matrix.max(), gray_matrix.min())
 
 # source: https://stackoverflow.com/questions/43864101/python-pil-check-if-image-is-transparent
-def has_transparency(img):
+def has_transparency(img,debug=DEFAULT_DEBUG):
+    """Scan the if there is transparency in the image."""
     # search metadata
     if img.info.get("transparency", None) is not None:
         if debug:
@@ -172,7 +181,6 @@ def has_transparency(img):
     return False
 
 def main():
-    global compress_level, quality, lossless, output_file_name, optimize, debug
     # Help message
     if len(sys.argv) < 2:
         print ("Usage: ./main.py [-q <quality_level> -c <compress_level> -l -f <output_file_name>] <image_to_analyze>")
@@ -186,13 +194,15 @@ def main():
     # Reading in the flags and arguments
     opts, args = getopt.getopt(sys.argv[1:], 'q:c:f:lov')
     for k, v in opts:
-        if k == '-q' and lossless==False:
+        if k == '-q':
             if int(v) > 100:
                 quality=100
             elif int(v)<0:
                 quality=0
             else:
                 quality=int(v)
+        else:
+            quality=DEFAULT_QUALITY
         if k == '-c':
             if int(v) > 9:
                 compress_level=9
@@ -200,32 +210,66 @@ def main():
                 compress_level=0
             else:
                 compress_level=int(v)
+        else:
+            compress_level=DEFAULT_COMPRESS_LEVEL
         if k == '-l':
             lossless=True
             quality=100
+        else:
+            lossless=DEFAULT_LOSSLESS
         if k == '-o':
             optimize=True
+        else:
+            lossless=DEFAULT_OPTIMIZE
         if k == '-f':
             output_file_name=v
         if k == '-v':
             debug=True
+        else:
+            debug=DEFAULT_DEBUG
 
     input_file_path = args[0]
+    result = scan(input_file_path, quality=quality, compress_level=compress_level, lossless=lossless, optimize=optimize, debug=debug)
+
+    print("Original file: " + result["original_filepath"])
+    print("Original size: " + str(byte_to_human(result["original_size"])) + " bytes")
+    if debug:
+        print("Image dimension: " + result["dimensions"])
+        print("Src image mode: " + result["original_mode"])
+    print("------------------------------------------------------------")
+    print("The smallest format to store this picture: " + result["result"]["ext"])
+    print("New image is {0}% identical to the original.".format(result["output_difference_precentage"]))
+    print("New image size is " + str(byte_to_human(result["output_true_size"])) + " byte.")
+    print("New image size is " + str(result["output_smaller_precentage"]) + "% of the original size.")
+    print("Converted to " + result["result"]["ext"].upper() + " with " + str(result["result"]["mode"]) + " mode: " + str(byte_to_human(result["result"]["size"])))
+
+def scan(image_to_analyze, quality=80, compress_level=6, lossless=False, optimize=False, debug=False):
+    # Checking the inputs
+    if lossless==False:
+        if quality > 100:
+            quality = 100
+        elif quality < 0:
+            quality = 0
+    else:
+        quality=100
+
+
+    if compress_level > 9:
+        compress_level=9
+    elif compress_level<0:
+        compress_level=0
+
+    input_file_path = image_to_analyze
 
     # Checkif file exist
     if not os.path.exists(input_file_path):
-        print("ERROR: This file does not exists: " + input_file_path)
-        sys.exit(1)
+        raise ValueError("ERROR: This file does not exists: " + input_file_path)
 
     # Reading the image and some data about
     image_to_analyze = Image.open(input_file_path)
     input_file_size = os.path.getsize(input_file_path)
 
-    print("Original file: " + input_file_path)
-    print("Original size: " + str(byte_to_human(input_file_size)) + " bytes")
-    if debug:
-        print("Image dimension: " + str(image_to_analyze.size[0]) + "x" + str(image_to_analyze.size[1]))
-        print("Src image mode: " + image_to_analyze.mode)
+
 
     all_result=[]
     formats_to_use=all_formats
@@ -249,7 +293,7 @@ def main():
     # Convert the images to all posibile conbinations of formats and modes
     for ext, modes in formats_to_use.items():
         for mode in modes:
-            result=convert_getsize(image_to_analyze, input_file_path, ext, mode, lossless, optimize, quality)
+            result=convert_getsize(image_to_analyze, input_file_path, ext, mode, quality=quality, compress_level=compress_level, lossless=lossless, optimize=optimize, debug=debug)
             # Decide if we want to use the result at all in the end or not, diff == 1 meens there is no loss in the conversion
             if lossless and result["diff"] == 1:
                 all_result.append(result)
@@ -262,7 +306,16 @@ def main():
     # Check if the output file is larger than the original do nothing.
     if final["size"] > input_file_size:
         print("I couldn't find a better format for this image with these options.")
-        sys.exit(0)
+        return {
+            "original_filepath": input_file_path,
+            "original_size": input_file_size,
+            "dimensions": str(image_to_analyze.size[0]) + "x" + str(image_to_analyze.size[1]),
+            "original_mode": image_to_analyze.mode,
+            "formats_used": formats_to_use,
+            "result": {
+
+            }
+        }
 
     # The final image file name, what if they give an extension with the filename? TODO: only use that extension
     original_path = os.path.splitext(input_file_path)
@@ -278,13 +331,20 @@ def main():
     # Result msg
     true_size = int(os.path.getsize(output_file_name))
 
-    print("------------------------------------------------------------")
-    print("The smallest format to store this picture: " + final["ext"])
-    print("New image is {0}% the same.".format(round((final["diff"]*100),2)))
-    print("New image size is " + str(byte_to_human(true_size)) + " byte.")
-    print("New image size is " + str(round(((true_size/input_file_size)*100),2))+"% of the original size.")
-    print("Converted to " + final["ext"].upper() + " with " + str(final["mode"]) + " mode: " + str(byte_to_human(final["size"])))
+    return {
+        "original_filepath": input_file_path,
+        "original_size": input_file_size,
+        "dimensions": str(image_to_analyze.size[0]) + "x" + str(image_to_analyze.size[1]),
+        "original_mode": image_to_analyze.mode,
+        "formats_used": formats_to_use,
+        "output_file_name": output_file_name,
+        "output_true_size": true_size,
+        "output_difference_precentage": round((final["diff"]*100),2),
+        "output_smaller_precentage": round(((true_size/input_file_size)*100),2),
+        "result": final
+    }
 
 
 if __name__ == '__main__':
+    SCRIPT=True
     main()
